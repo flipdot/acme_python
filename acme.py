@@ -9,7 +9,7 @@ import time
 
 import config
 
-acme_sh = ["./acme.sh/acme.sh"]
+acme_sh = [os.path.dirname(__file__)+"/acme.sh/acme.sh"]
 
 log = logging.getLogger(__name__)
 
