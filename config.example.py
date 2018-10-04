@@ -1,7 +1,7 @@
 PORT = 80
 HTTPS_PORT = 443
-DOMAIN = "door.flipdot.space"
-EMAIL = "my@invalid.email"
+ACME_DOMAIN = "door.flipdot.space"
+ACME_EMAIL = "my@invalid.email"
 
 DEBUG=False
 STAGING=True
