@@ -15,7 +15,7 @@ log = logging.getLogger(__name__)
 
 class ACME(object):
     def __init__(self, app, staging=True):
-        log.info("preparing ACME for %s", config.DOMAIN)
+        log.info("preparing ACME for %s", config.ACME_DOMAIN)
         if staging:
             if "--staging" not in acme_sh:
                 acme_sh.append("--staging")
@@ -44,9 +44,9 @@ class ACME(object):
         self.cond.release()
 
     def cert_paths(self):
-        base_path = "%s/.acme.sh/%s" % (os.getenv("HOME"), config.DOMAIN)
+        base_path = "%s/.acme.sh/%s" % (os.getenv("HOME"), config.ACME_DOMAIN)
         cert = "%s/fullchain.cer" % base_path
-        key = "%s/%s.key" % (base_path, config.DOMAIN)
+        key = "%s/%s.key" % (base_path, config.ACME_DOMAIN)
         return cert, key
 
     def try_load_cert(self):
@@ -88,7 +88,7 @@ class ACME(object):
         self.https_srv = make_server("0.0.0.0", config.HTTPS_PORT, self.app,
             threaded=True, processes=0, passthrough_errors=True,
             ssl_context=self.context)
-        log.info("Running at https://%s:%d/", config.DOMAIN, config.HTTPS_PORT)
+        log.info("Running at https://%s:%d/", config.ACME_DOMAIN, config.HTTPS_PORT)
         self.https_srv.serve_forever()
 
     def handle_challenge(self, challenge):
@@ -97,7 +97,7 @@ class ACME(object):
 
     def get_account(self):
         try:
-            out = sh(acme_sh + ["--register-account", "--accountemail", config.EMAIL])
+            out = sh(acme_sh + ["--register-account", "--accountemail", config.ACME_EMAIL])
         except ACMEError as e:
             e.message = "Registering account. " + e.message
             raise e
@@ -111,7 +111,7 @@ class ACME(object):
 
     def issue_cert(self):
         try:
-            out = sh(acme_sh + ["--renew", "-d", config.DOMAIN])
+            out = sh(acme_sh + ["--renew", "-d", config.ACME_DOMAIN])
         except ACMEError as e:
             if "Skip, Next renewal time is" in e.output:
                 logging.info("Cert is up-to date, renewal: %s",
@@ -119,7 +119,7 @@ class ACME(object):
                 return
             raise e
         if "not a issued domain" in out:
-            out = sh(acme_sh + ["--issue", "--stateless", "-d", config.DOMAIN])
+            out = sh(acme_sh + ["--issue", "--stateless", "-d", config.ACME_DOMAIN])
             log.info("issued cert: %s", out)
             self.try_load_cert()
             return
