@@ -11,11 +11,11 @@ import config
 
 acme_sh = [os.path.dirname(__file__)+"/acme.sh/acme.sh"]
 
-log = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 class ACME(object):
     def __init__(self, app, staging=True):
-        log.info("preparing ACME for %s", config.ACME_DOMAIN)
+        logger.info("preparing ACME for %s", config.ACME_DOMAIN)
         if staging:
             if "--staging" not in acme_sh:
                 acme_sh.append("--staging")
@@ -51,12 +51,12 @@ class ACME(object):
 
     def try_load_cert(self):
         cert, key = self.cert_paths()
-        log.debug("Cert: %s; %s", cert, key)
+        logger.debug("Cert: %s; %s", cert, key)
         try:
             self.context.load_cert_chain(cert, key)
             self.start_https()
         except IOError as e:
-            log.warning("No cert file (yet): %s %s", repr(e), e.filename)
+            logger.warning("No cert file (yet): %s %s", repr(e), e.filename)
 
     def run(self):
         # wait for flask to start up
@@ -76,7 +76,7 @@ class ACME(object):
                 self.https_thread.start()
             except RuntimeError as e:
                 if "started once" in e.message:
-                    log.info("Restarting https...")
+                    logger.info("Restarting https...")
                     self.https_srv.shutdown()
                     self.https_thread.join()
                     self.https_thread = None
@@ -88,7 +88,7 @@ class ACME(object):
         self.https_srv = make_server("0.0.0.0", config.HTTPS_PORT, self.app,
             threaded=True, processes=0, passthrough_errors=True,
             ssl_context=self.context)
-        log.info("Running at https://%s:%d/", config.ACME_DOMAIN, config.HTTPS_PORT)
+        logger.info("Running at https://%s:%d/", config.ACME_DOMAIN, config.HTTPS_PORT)
         self.https_srv.serve_forever()
 
     def handle_challenge(self, challenge):
@@ -101,10 +101,10 @@ class ACME(object):
         except ACMEError as e:
             e.message = "Registering account. " + e.message
             raise e
-        log.debug("register account: %s", out)
+        logger.debug("register account: %s", out)
         for match in re.finditer(r"ACCOUNT_THUMBPRINT='([^']+)'", out):
             c = match.group(1)
-            log.debug("Challenge: %s", c)
+            logger.debug("Challenge: %s", c)
             return c
         raise ACMEError("no thumprint found. output was: %s", out)
 
@@ -114,17 +114,17 @@ class ACME(object):
             out = sh(acme_sh + ["--renew", "-d", config.ACME_DOMAIN])
         except ACMEError as e:
             if "Skip, Next renewal time is" in e.output:
-                logging.info("Cert is up-to date, renewal: %s",
+                logger.info("Cert is up-to date, renewal: %s",
                     e.output.split("renewal time is: ")[1])
                 return
             raise e
         if "not a issued domain" in out:
             out = sh(acme_sh + ["--issue", "--stateless", "-d", config.ACME_DOMAIN])
-            log.info("issued cert: %s", out)
+            logger.info("issued cert: %s", out)
             self.try_load_cert()
             return
         # renewed cert TODO check output
-        log.info("renewed cert: %s", out)
+        logger.info("renewed cert: %s", out)
         self.try_load_cert()
 
 
