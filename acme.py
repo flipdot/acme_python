@@ -1,17 +1,19 @@
 #!/usr/bin/python2
+import time
+
 import logging
 import os
 import re
 import ssl
 import subprocess
 import threading
-import time
 
 import config
 
-acme_sh = [os.path.dirname(__file__)+"/acme.sh/acme.sh"]
+acme_sh = [os.path.dirname(__file__) + "/acme.sh/acme.sh"]
 
 logger = logging.getLogger(__name__)
+
 
 class ACME(object):
     def __init__(self, app, staging=True):
@@ -65,7 +67,7 @@ class ACME(object):
             self.issue_cert()
 
             self.cond.acquire()
-            self.cond.wait(60*60)
+            self.cond.wait(60 * 60)
             self.cond.release()
 
     def start_https(self):
@@ -82,12 +84,11 @@ class ACME(object):
                     self.https_thread = None
                     self.start_https()
 
-
     def run_https(self):
         from werkzeug.serving import make_server
         self.https_srv = make_server("0.0.0.0", config.HTTPS_PORT, self.app,
-            threaded=True, processes=0, passthrough_errors=True,
-            ssl_context=self.context)
+                                     threaded=True, processes=0, passthrough_errors=True,
+                                     ssl_context=self.context)
         logger.info("Running at https://%s:%d/", config.ACME_DOMAIN, config.HTTPS_PORT)
         self.https_srv.serve_forever()
 
@@ -108,14 +109,13 @@ class ACME(object):
             return c
         raise ACMEError("no thumprint found. output was: %s", out)
 
-
     def issue_cert(self):
         try:
             out = sh(acme_sh + ["--renew", "-d", config.ACME_DOMAIN])
         except ACMEError as e:
             if "Skip, Next renewal time is" in e.output:
                 logger.info("Cert is up-to date, renewal: %s",
-                    e.output.split("renewal time is: ")[1])
+                            e.output.split("renewal time is: ")[1])
                 return
             raise e
         if "not a issued domain" in out:
@@ -134,6 +134,7 @@ def sh(argv):
     except subprocess.CalledProcessError as e:
         raise ACMEError("exec %s [%d]: %s" % (argv, e.returncode, e.output), e)
     return out
+
 
 class ACMEError(BaseException):
     def __init__(self, msg, base=None):
