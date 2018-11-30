@@ -8,7 +8,7 @@ import ssl
 import subprocess
 import threading
 
-import config
+from . import config
 
 acme_sh = [os.path.dirname(__file__) + "/acme.sh/acme.sh"]
 
