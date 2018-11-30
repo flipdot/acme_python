@@ -26,6 +26,7 @@ class ACME(object):
                 acme_sh.remove("--staging")
 
         self.account_thumb = self.get_account()
+        self.https_srv = None
         self.app = app
         app.route('/.well-known/acme-challenge/<challenge>')(
             self.handle_challenge)
@@ -45,7 +46,8 @@ class ACME(object):
         self.cond.notify_all()
         self.cond.release()
 
-    def cert_paths(self):
+    @staticmethod
+    def cert_paths():
         base_path = "%s/.acme.sh/%s" % (os.getenv("HOME"), config.ACME_DOMAIN)
         cert = "%s/fullchain.cer" % base_path
         key = "%s/%s.key" % (base_path, config.ACME_DOMAIN)
@@ -77,7 +79,7 @@ class ACME(object):
             try:
                 self.https_thread.start()
             except RuntimeError as e:
-                if "started once" in e.message:
+                if "started once" in e:
                     logger.info("Restarting https...")
                     self.https_srv.shutdown()
                     self.https_thread.join()
@@ -96,14 +98,15 @@ class ACME(object):
         full = challenge + "." + self.account_thumb
         return full
 
-    def get_account(self):
+    @staticmethod
+    def get_account():
         try:
             out = sh(acme_sh + ["--register-account", "--accountemail", config.ACME_EMAIL])
         except ACMEError as e:
             e.message = "Registering account. " + e.message
             raise e
         logger.debug("register account: %s", out)
-        for match in re.finditer(r"ACCOUNT_THUMBPRINT='([^']+)'", out):
+        for match in re.finditer(b"ACCOUNT_THUMBPRINT='([^']+)'", out):
             c = match.group(1)
             logger.debug("Challenge: %s", c)
             return c
@@ -113,7 +116,7 @@ class ACME(object):
         try:
             out = sh(acme_sh + ["--renew", "-d", config.ACME_DOMAIN])
         except ACMEError as e:
-            if "Skip, Next renewal time is" in e.output:
+            if b"Skip, Next renewal time is" in e.output:
                 logger.info("Cert is up-to date, renewal: %s",
                             e.output.split("renewal time is: ")[1])
                 return
